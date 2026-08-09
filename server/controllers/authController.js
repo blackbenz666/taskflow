@@ -23,7 +23,7 @@ export const registerUser = async (req, res) => {
         .json({ message: "Пользователь с таким email уже существует" });
     }
 
-    const salt = await bcrypt.getSalt(10);
+    const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
     const user = await User.create({
@@ -33,7 +33,7 @@ export const registerUser = async (req, res) => {
     });
 
     if (user) {
-      req.status(200).json({
+      res.status(200).json({
         _id: user.id,
         name: user.name,
         email: user.email,
@@ -41,7 +41,7 @@ export const registerUser = async (req, res) => {
         token: generateToken(user._id),
       });
     } else {
-      req.status(400).json({ message: "Неверные данные пользователя" });
+      res.status(400).json({ message: "Неверные данные пользователя" });
     }
   } catch (error) {
     res.status(500).json({ mesage: error.message });
@@ -54,7 +54,7 @@ export const loginUser = async (req, res) => {
     const user = await User.findOne({ email });
 
     if (user && (await bcrypt.compare(password, user.password))) {
-      req.json({
+      res.json({
         _id: user.id,
         name: user.name,
         email: user.email,
