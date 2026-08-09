@@ -1,0 +1,15 @@
+# Node dependencies
+node_modules/
+
+# Production builds
+dist/
+build/
+
+# Environment variables
+.env
+.env.local
+
+# Logs & System files
+*.log
+.DS_Store
+.vscode/
