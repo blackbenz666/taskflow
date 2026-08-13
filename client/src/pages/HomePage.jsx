@@ -1,51 +1,142 @@
-import { useSelector, useDispatch } from 'react-redux';
+import { useEffect, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import { logout } from '../redux/slices/authSlice';
-import { Link } from 'react-router-dom';
+import { getTasks, createTask, deleteTask } from '../redux/slices/taskSlice';
 
 export const HomePage = () => {
   const dispatch = useDispatch();
+
   const { user } = useSelector((state) => state.auth);
 
-  return (
-    <div className="flex min-h-[80vh] flex-col items-center justify-center text-white">
-      <div className="w-full max-w-lg rounded-xl bg-slate-800 p-8 shadow-lg text-center">
-        <h1 className="mb-4 text-3xl font-bold">Главная страница</h1>
+  const { tasks, isLoading, error } = useSelector((state) => state.tasks);
 
-        {user ? (
-          <div>
-            <p className="mb-2 text-lg text-slate-300">
-              Привет, <span className="font-semibold text-indigo-400">{user.name}</span>! 👋
-            </p>
-            <p className="mb-6 text-sm text-slate-400">Email: {user.email}</p>
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+
+  useEffect(() => {
+    dispatch(getTasks());
+  }, [dispatch]);
+
+  const handleCreateTask = (e) => {
+    e.preventDefault();
+    if (!title.trim()) return;
+
+    dispatch(createTask({ title, description }));
+    setTitle('');
+    setDescription('');
+  };
+
+  const handleDeleteTask = (id) => {
+    dispatch(deleteTask(id));
+  };
+
+  return (
+    <div className="mx-auto max-w-4xl px-4 py-8">
+      {/* --- ШАПКА ПРОФИЛЯ --- */}
+      <header className="mb-8 flex items-center justify-between rounded-xl bg-slate-800 p-6 shadow-lg">
+        <div>
+          <h1 className="text-2xl font-bold text-white">
+            Привет, {user?.name || 'Пользователь'}! 👋
+          </h1>
+          <p className="text-sm text-slate-400">{user?.email}</p>
+        </div>
+        <button
+          onClick={() => dispatch(logout())}
+          className="rounded-lg bg-red-500/10 px-4 py-2 font-medium text-red-400 hover:bg-red-500/20 transition-colors"
+        >
+          Выйти
+        </button>
+      </header>
+
+      <div className="grid gap-8 md:grid-cols-3">
+        {/* --- ФОРМА СОЗДАНИЯ ЗАДАЧИ --- */}
+        <div className="md:col-span-1">
+          <form
+            onSubmit={handleCreateTask}
+            className="rounded-xl bg-slate-800 p-6 shadow-lg"
+          >
+            <h2 className="mb-4 text-lg font-semibold text-white">Новая задача</h2>
+
+            {error && (
+              <div className="mb-4 rounded-lg bg-red-500/10 p-3 text-sm text-red-400">
+                {error}
+              </div>
+            )}
+
+            <div className="mb-4">
+              <label className="mb-1 block text-sm font-medium text-slate-300">
+                Название
+              </label>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Что нужно сделать?"
+                className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none"
+                required
+              />
+            </div>
+
+            <div className="mb-6">
+              <label className="mb-1 block text-sm font-medium text-slate-300">
+                Описание
+              </label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Детали задачи..."
+                rows="3"
+                className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none resize-none"
+              />
+            </div>
 
             <button
-              onClick={() => dispatch(logout())}
-              className="rounded bg-red-600 px-5 py-2 font-medium text-white transition-colors hover:bg-red-500"
+              type="submit"
+              disabled={isLoading}
+              className="w-full rounded-lg bg-indigo-600 py-2.5 font-medium text-white hover:bg-indigo-500 disabled:opacity-50 transition-colors"
             >
-              Выйти из аккаунта
+              Добавить задачу
             </button>
-          </div>
-        ) : (
-          <div>
-            <p className="mb-6 text-slate-300">
-              Вы не авторизованы. Войдите или зарегистрируйтесь, чтобы продолжить.
-            </p>
-            <div className="flex justify-center gap-4">
-              <Link
-                to="/login"
-                className="rounded bg-indigo-600 px-5 py-2 font-medium text-white transition-colors hover:bg-indigo-500"
-              >
-                Войти
-              </Link>
-              <Link
-                to="/register"
-                className="rounded bg-slate-700 px-5 py-2 font-medium text-white transition-colors hover:bg-slate-600"
-              >
-                Регистрация
-              </Link>
+          </form>
+        </div>
+
+        {/* --- СПИСОК ЗАДАЧ --- */}
+        <div className="md:col-span-2">
+          <h2 className="mb-4 text-lg font-semibold text-white">
+            Ваши задачи ({tasks.length})
+          </h2>
+
+          {isLoading && tasks.length === 0 ? (
+            <div className="text-center py-8 text-slate-400">Загрузка задач...</div>
+          ) : tasks.length === 0 ? (
+            <div className="rounded-xl bg-slate-800/50 p-8 text-center text-slate-400">
+              Задач пока нет. Создайте первую слева! 🚀
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="space-y-3">
+              {tasks.map((task) => (
+                <div
+                  key={task._id}
+                  className="flex items-start justify-between rounded-xl bg-slate-800 p-5 shadow-lg border border-slate-700/50 hover:border-slate-600 transition-colors"
+                >
+                  <div className="space-y-1 pr-4">
+                    <h3 className="font-semibold text-white">{task.title}</h3>
+                    {task.description && (
+                      <p className="text-sm text-slate-400">{task.description}</p>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => handleDeleteTask(task._id)}
+                    className="text-slate-500 hover:text-red-400 p-1 transition-colors"
+                    title="Удалить"
+                  >
+                    🗑️
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
