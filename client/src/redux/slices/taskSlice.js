@@ -1,8 +1,4 @@
-import {
-  createSlice,
-  createAsyncThunk,
-  isRejectedWithValue,
-} from "@reduxjs/toolkit";
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "../../api/axios";
 
 const initialState = {
@@ -44,11 +40,25 @@ export const deleteTask = createAsyncThunk(
   "tasks/deleteTask",
   async (id, { rejectWithValue }) => {
     try {
-      const response = axios.delete(`/tasks/${id}`);
-      return response.data;
+      await axios.delete(`/tasks/${id}`);
+      return id;
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Не удалось удалить задачу",
+      );
+    }
+  },
+);
+
+export const updateTask = createAsyncThunk(
+  "tasks/updateTask",
+  async ({ id, ...updateData }, { rejectWithValue }) => {
+    try {
+      const response = await axios.put(`/tasks/${id}`, updateData);
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Не удалось обновить задачу",
       );
     }
   },
@@ -60,7 +70,7 @@ const taskSlice = createSlice({
   reducers: {},
   extraReducers: (builder) => {
     builder
-      //GET TASKS
+      // GET TASKS
       .addCase(getTasks.pending, (state) => {
         state.isLoading = true;
         state.error = null;
@@ -73,7 +83,7 @@ const taskSlice = createSlice({
         state.isLoading = false;
         state.error = action.payload;
       })
-      //CREATE TASK
+      // CREATE TASK
       .addCase(createTask.pending, (state) => {
         state.isLoading = true;
         state.error = null;
@@ -86,18 +96,28 @@ const taskSlice = createSlice({
         state.isLoading = false;
         state.error = action.payload;
       })
-      //DELETE TASK
+      // DELETE TASK
       .addCase(deleteTask.pending, (state) => {
         state.error = null;
       })
       .addCase(deleteTask.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.tasks = state.tasks.filter(
-          (task) => task._id !== action.payload.id,
-        );
+        state.tasks = state.tasks.filter((task) => task._id !== action.payload);
       })
       .addCase(deleteTask.rejected, (state, action) => {
         state.error = action.payload;
+      })
+      // UPDATE TASK
+      .addCase(updateTask.fulfilled, (state, action) => {
+        if (!action.payload?._id) return;
+
+        const index = state.tasks.findIndex(
+          (task) => task._id === action.payload._id,
+        );
+
+        if (index !== -1) {
+          state.tasks[index] = action.payload;
+        }
       });
   },
 });

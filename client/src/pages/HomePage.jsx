@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { logout } from '../redux/slices/authSlice';
-import { getTasks, createTask, deleteTask } from '../redux/slices/taskSlice';
+import { getTasks, createTask, deleteTask, updateTask } from '../redux/slices/taskSlice';
 
 export const HomePage = () => {
   const dispatch = useDispatch();
@@ -119,12 +119,31 @@ export const HomePage = () => {
                   key={task._id}
                   className="flex items-start justify-between rounded-xl bg-slate-800 p-5 shadow-lg border border-slate-700/50 hover:border-slate-600 transition-colors"
                 >
-                  <div className="space-y-1 pr-4">
-                    <h3 className="font-semibold text-white">{task.title}</h3>
-                    {task.description && (
-                      <p className="text-sm text-slate-400">{task.description}</p>
-                    )}
+                  <div className="flex items-start gap-3 pr-4">
+                    <input
+                      type="checkbox"
+                      checked={task.completed}
+                      onChange={() =>
+                        dispatch(
+                          updateTask({ id: task._id, completed: !task.completed })
+                        )
+                      }
+                      className="mt-1 h-5 w-5 cursor-pointer rounded bg-slate-900 border-slate-700 text-indigo-600 focus:ring-0"
+                    />
+
+                    <div className="space-y-1">
+                      <h3
+                        className={`font-semibold ${task.completed ? 'line-through text-slate-500' : 'text-white'
+                          }`}
+                      >
+                        {task.title}
+                      </h3>
+                      {task.description && (
+                        <p className="text-sm text-slate-400">{task.description}</p>
+                      )}
+                    </div>
                   </div>
+
                   <button
                     onClick={() => handleDeleteTask(task._id)}
                     className="text-slate-500 hover:text-red-400 p-1 transition-colors"
