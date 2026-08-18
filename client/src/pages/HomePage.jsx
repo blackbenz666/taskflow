@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { logout } from '../redux/slices/authSlice';
 import { getTasks, createTask, deleteTask, updateTask } from '../redux/slices/taskSlice';
@@ -10,13 +10,25 @@ export const HomePage = () => {
 
   const { tasks, isLoading, error } = useSelector((state) => state.tasks);
 
+  const [filter, setFilter] = useState('all'); // 'all' | 'active' | 'completed'
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
 
-  // Состояние для редактирования
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
+
+  const filteredTasks = useMemo(() => {
+    return tasks.filter((task) => {
+      if (filter == 'active') return !task.completed;
+      if (filter == 'completed') return task.completed;
+      return true;
+    })
+  }, [tasks, filter]);
+
+  const activeTasksCount = useMemo(() => {
+    return tasks.filter((task) => !task.completed).length;
+  }, [tasks]);
 
   useEffect(() => {
     dispatch(getTasks());
@@ -35,21 +47,18 @@ export const HomePage = () => {
     dispatch(deleteTask(id));
   };
 
-  // Начать редактирование задачи
   const handleStartEdit = (task) => {
     setEditingTaskId(task._id);
     setEditTitle(task.title);
     setEditDescription(task.description || '');
   };
 
-  // Отмена редактирования
   const handleCancelEdit = () => {
     setEditingTaskId(null);
     setEditTitle('');
     setEditDescription('');
   };
 
-  // Сохранение изменений
   const handleSaveEdit = (id) => {
     if (!editTitle.trim()) return;
 
@@ -61,7 +70,7 @@ export const HomePage = () => {
       })
     );
 
-    handleCancelEdit(); // Сбрасываем режим редактирования
+    handleCancelEdit();
   };
 
   return (
@@ -136,25 +145,63 @@ export const HomePage = () => {
 
         {/* --- СПИСОК ЗАДАЧ --- */}
         <div className="md:col-span-2">
-          <h2 className="mb-4 text-lg font-semibold text-white">
-            Ваши задачи ({tasks.length})
-          </h2>
+          <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="text-lg font-semibold text-white">
+              Ваши задачи ({tasks.length})
+            </h2>
+
+            {/* Табы фильтрации */}
+            <div className="flex rounded-lg border border-slate-700 bg-slate-900 p-1">
+              <button
+                onClick={() => setFilter('all')}
+                className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${filter === 'all'
+                    ? 'bg-indigo-600 text-white'
+                    : 'text-slate-400 hover:text-white'
+                  }`}
+              >
+                Все ({tasks.length})
+              </button>
+              <button
+                onClick={() => setFilter('active')}
+                className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${filter === 'active'
+                    ? 'bg-indigo-600 text-white'
+                    : 'text-slate-400 hover:text-white'
+                  }`}
+              >
+                В работе ({activeTasksCount})
+              </button>
+              <button
+                onClick={() => setFilter('completed')}
+                className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${filter === 'completed'
+                    ? 'bg-indigo-600 text-white'
+                    : 'text-slate-400 hover:text-white'
+                  }`}
+              >
+                Завершённые ({tasks.length - activeTasksCount})
+              </button>
+            </div>
+          </div>
 
           {isLoading && tasks.length === 0 ? (
-            <div className="text-center py-8 text-slate-400">Загрузка задач...</div>
+            <div className="py-8 text-center text-slate-400">Загрузка задач...</div>
           ) : tasks.length === 0 ? (
             <div className="rounded-xl bg-slate-800/50 p-8 text-center text-slate-400">
               Задач пока нет. Создайте первую слева! 🚀
             </div>
+          ) : filteredTasks.length === 0 ? (
+            <div className="rounded-xl bg-slate-800/50 p-8 text-center text-slate-400">
+              {filter === 'active' && 'Нет активных задач 🎉'}
+              {filter === 'completed' && 'Нет завершённых задач 📌'}
+            </div>
           ) : (
             <div className="space-y-3">
-              {tasks.map((task) => {
+              {filteredTasks.map((task) => {
                 const isEditing = editingTaskId === task._id;
 
                 return (
                   <div
                     key={task._id}
-                    className="flex items-start justify-between rounded-xl bg-slate-800 p-5 shadow-lg border border-slate-700/50 hover:border-slate-600 transition-colors"
+                    className="flex items-start justify-between rounded-xl border border-slate-700/50 bg-slate-800 p-5 shadow-lg transition-colors hover:border-slate-600"
                   >
                     {isEditing ? (
                       /* --- РЕЖИМ РЕДАКТИРОВАНИЯ --- */
@@ -163,27 +210,27 @@ export const HomePage = () => {
                           type="text"
                           value={editTitle}
                           onChange={(e) => setEditTitle(e.target.value)}
-                          className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-1.5 text-white focus:border-indigo-500 focus:outline-none"
+                          className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-white focus:border-indigo-500 focus:outline-none"
                           placeholder="Название задачи"
                           autoFocus
                         />
                         <textarea
                           value={editDescription}
                           onChange={(e) => setEditDescription(e.target.value)}
-                          className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-1.5 text-sm text-white focus:border-indigo-500 focus:outline-none resize-none"
+                          className="w-full resize-none rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-white focus:border-indigo-500 focus:outline-none"
                           placeholder="Описание задачи"
                           rows="2"
                         />
                         <div className="flex gap-2">
                           <button
                             onClick={() => handleSaveEdit(task._id)}
-                            className="rounded-lg bg-indigo-600 px-3 py-1 text-xs font-medium text-white hover:bg-indigo-500 transition-colors"
+                            className="rounded-lg bg-indigo-600 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-indigo-500"
                           >
                             Сохранить
                           </button>
                           <button
                             onClick={handleCancelEdit}
-                            className="rounded-lg bg-slate-700 px-3 py-1 text-xs font-medium text-slate-300 hover:bg-slate-600 transition-colors"
+                            className="rounded-lg bg-slate-700 px-3 py-1 text-xs font-medium text-slate-300 transition-colors hover:bg-slate-600"
                           >
                             Отмена
                           </button>
@@ -201,7 +248,7 @@ export const HomePage = () => {
                                 updateTask({ id: task._id, completed: !task.completed })
                               )
                             }
-                            className="mt-1 h-5 w-5 cursor-pointer rounded bg-slate-900 border-slate-700 text-indigo-600 focus:ring-0"
+                            className="mt-1 h-5 w-5 cursor-pointer rounded border-slate-700 bg-slate-900 text-indigo-600 focus:ring-0"
                           />
 
                           <div className="space-y-1">
@@ -221,7 +268,7 @@ export const HomePage = () => {
                           {/* Кнопка Редактировать */}
                           <button
                             onClick={() => handleStartEdit(task)}
-                            className="text-slate-500 hover:text-indigo-400 p-1 transition-colors"
+                            className="p-1 text-slate-500 transition-colors hover:text-indigo-400"
                             title="Редактировать"
                           >
                             ✏️
@@ -229,7 +276,7 @@ export const HomePage = () => {
                           {/* Кнопка Удалить */}
                           <button
                             onClick={() => handleDeleteTask(task._id)}
-                            className="text-slate-500 hover:text-red-400 p-1 transition-colors"
+                            className="p-1 text-slate-500 transition-colors hover:text-red-400"
                             title="Удалить"
                           >
                             🗑️
