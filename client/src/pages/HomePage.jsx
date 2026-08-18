@@ -13,6 +13,11 @@ export const HomePage = () => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
 
+  // Состояние для редактирования
+  const [editingTaskId, setEditingTaskId] = useState(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+
   useEffect(() => {
     dispatch(getTasks());
   }, [dispatch]);
@@ -28,6 +33,35 @@ export const HomePage = () => {
 
   const handleDeleteTask = (id) => {
     dispatch(deleteTask(id));
+  };
+
+  // Начать редактирование задачи
+  const handleStartEdit = (task) => {
+    setEditingTaskId(task._id);
+    setEditTitle(task.title);
+    setEditDescription(task.description || '');
+  };
+
+  // Отмена редактирования
+  const handleCancelEdit = () => {
+    setEditingTaskId(null);
+    setEditTitle('');
+    setEditDescription('');
+  };
+
+  // Сохранение изменений
+  const handleSaveEdit = (id) => {
+    if (!editTitle.trim()) return;
+
+    dispatch(
+      updateTask({
+        id,
+        title: editTitle,
+        description: editDescription,
+      })
+    );
+
+    handleCancelEdit(); // Сбрасываем режим редактирования
   };
 
   return (
@@ -114,45 +148,98 @@ export const HomePage = () => {
             </div>
           ) : (
             <div className="space-y-3">
-              {tasks.map((task) => (
-                <div
-                  key={task._id}
-                  className="flex items-start justify-between rounded-xl bg-slate-800 p-5 shadow-lg border border-slate-700/50 hover:border-slate-600 transition-colors"
-                >
-                  <div className="flex items-start gap-3 pr-4">
-                    <input
-                      type="checkbox"
-                      checked={task.completed}
-                      onChange={() =>
-                        dispatch(
-                          updateTask({ id: task._id, completed: !task.completed })
-                        )
-                      }
-                      className="mt-1 h-5 w-5 cursor-pointer rounded bg-slate-900 border-slate-700 text-indigo-600 focus:ring-0"
-                    />
+              {tasks.map((task) => {
+                const isEditing = editingTaskId === task._id;
 
-                    <div className="space-y-1">
-                      <h3
-                        className={`font-semibold ${task.completed ? 'line-through text-slate-500' : 'text-white'
-                          }`}
-                      >
-                        {task.title}
-                      </h3>
-                      {task.description && (
-                        <p className="text-sm text-slate-400">{task.description}</p>
-                      )}
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => handleDeleteTask(task._id)}
-                    className="text-slate-500 hover:text-red-400 p-1 transition-colors"
-                    title="Удалить"
+                return (
+                  <div
+                    key={task._id}
+                    className="flex items-start justify-between rounded-xl bg-slate-800 p-5 shadow-lg border border-slate-700/50 hover:border-slate-600 transition-colors"
                   >
-                    🗑️
-                  </button>
-                </div>
-              ))}
+                    {isEditing ? (
+                      /* --- РЕЖИМ РЕДАКТИРОВАНИЯ --- */
+                      <div className="w-full space-y-3 pr-4">
+                        <input
+                          type="text"
+                          value={editTitle}
+                          onChange={(e) => setEditTitle(e.target.value)}
+                          className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-1.5 text-white focus:border-indigo-500 focus:outline-none"
+                          placeholder="Название задачи"
+                          autoFocus
+                        />
+                        <textarea
+                          value={editDescription}
+                          onChange={(e) => setEditDescription(e.target.value)}
+                          className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-1.5 text-sm text-white focus:border-indigo-500 focus:outline-none resize-none"
+                          placeholder="Описание задачи"
+                          rows="2"
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleSaveEdit(task._id)}
+                            className="rounded-lg bg-indigo-600 px-3 py-1 text-xs font-medium text-white hover:bg-indigo-500 transition-colors"
+                          >
+                            Сохранить
+                          </button>
+                          <button
+                            onClick={handleCancelEdit}
+                            className="rounded-lg bg-slate-700 px-3 py-1 text-xs font-medium text-slate-300 hover:bg-slate-600 transition-colors"
+                          >
+                            Отмена
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      /* --- ОБЫЧНЫЙ РЕЖИМ ОТОБРАЖЕНИЯ --- */
+                      <>
+                        <div className="flex items-start gap-3 pr-4">
+                          <input
+                            type="checkbox"
+                            checked={task.completed}
+                            onChange={() =>
+                              dispatch(
+                                updateTask({ id: task._id, completed: !task.completed })
+                              )
+                            }
+                            className="mt-1 h-5 w-5 cursor-pointer rounded bg-slate-900 border-slate-700 text-indigo-600 focus:ring-0"
+                          />
+
+                          <div className="space-y-1">
+                            <h3
+                              className={`font-semibold ${task.completed ? 'line-through text-slate-500' : 'text-white'
+                                }`}
+                            >
+                              {task.title}
+                            </h3>
+                            {task.description && (
+                              <p className="text-sm text-slate-400">{task.description}</p>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1">
+                          {/* Кнопка Редактировать */}
+                          <button
+                            onClick={() => handleStartEdit(task)}
+                            className="text-slate-500 hover:text-indigo-400 p-1 transition-colors"
+                            title="Редактировать"
+                          >
+                            ✏️
+                          </button>
+                          {/* Кнопка Удалить */}
+                          <button
+                            onClick={() => handleDeleteTask(task._id)}
+                            className="text-slate-500 hover:text-red-400 p-1 transition-colors"
+                            title="Удалить"
+                          >
+                            🗑️
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
