@@ -2,7 +2,7 @@ import { Task } from "../models/Task.js";
 
 export const createTask = async (req, res) => {
   try {
-    const { title, description } = req.body;
+    const { title, description, priority, dueDate } = req.body;
 
     if (!title) {
       res.status(400).json({ message: "Название задачи обязательно" });
@@ -12,6 +12,8 @@ export const createTask = async (req, res) => {
       user: req.user.id,
       title,
       description,
+      priority,
+      dueDate,
     });
 
     res.status(201).json(task);
